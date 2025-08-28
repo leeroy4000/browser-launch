@@ -14,7 +14,7 @@ This Python script automates the launch of the Brave browser in a multi-tab conf
 This script is automatically triggered at login if installed via the companion setup script (`setup_brave_environment.sh`). To run manually:
 
 ```bash
-~/.brave_env/bin/python ~/Documents/Coding/Scripts/brave_bootup.py
+~/.brave_env/bin/python /usr/local/bin/brave_bootup.py
 ```
 
 > ⚠️ Requires Brave browser and Playwright installed in a virtual environment. (See setup_brave_environment.sh repo)
