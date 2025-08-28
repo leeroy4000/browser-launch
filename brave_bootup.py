@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Script: brave_bootup.sh
+Script: brave_bootup.py
 Purpose: Launches Brave, accepts captive portal login (if on work WiFi), opens multi-tab windows
 """
 
