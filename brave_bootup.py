@@ -1,15 +1,22 @@
 #!/usr/bin/env python3
+
 """
 Script: brave_bootup.py
 Purpose: Launches Brave, accepts captive portal login (if on work WiFi), opens multi-tab windows
 """
 
 import os
+import sys
 import time
 import subprocess
 import logging
 from pathlib import Path
 from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeout
+
+# ─── Root Guard ───────────────────────────────────────────────────────────
+if os.geteuid() == 0:
+    print("❌ Do not run this script as root. Use your regular user account.")
+    sys.exit(1)
 
 # ─── Pre-Logging Touchpoint ───────────────────────────────────────────────
 try:
@@ -90,20 +97,23 @@ def main():
         logging.info("🛑 Not on UnityPoint Guest WiFi — skipping captive portal flow.")
 
     open_tabs([
-        "https://192.168.1.15:8006/#v1:0:18:4:::::::",      # Proxmox
         "https://192.168.1.24:8006/#v1:0:18:4:::::::",      # Proxmox
         "https://192.168.1.1/",                             # pfSense
         "https://192.168.1.2/admin/",                       # Pi-hole
-        "https://192.168.1.13:8043/#dashboard",             # Omada
+        "https://192.168.1.29:8043/#dashboard",             # Omada
         "http://192.168.1.26:8123/dashboard-default/0",     # Home Assistant
-        "http://192.168.1.14:9000/#!/3/docker/containers"   # Portainer
+        "http://192.168.1.27:5020/",                        # Frigate
+        "http://192.168.1.27:9000/#!/3/docker/containers"   # Portainer
     ])
 
-    open_tabs(["https://copilot.microsoft.com/"], delay=4)
+    open_tabs([
+        "https://copilot.microsoft.com/",                   # Copilot
+        "https://suno.com/"                                 # Suno
+    ], delay=4)
 
     open_tabs([
         "https://www.youtube.com/",
-        "http://192.168.1.14:8096/web/#/home.html",         # Jellyfin
+        "http://192.168.1.27:8096/web/#/home.html",         # Jellyfin
         "https://www.amazon.com/gp/video/storefront"
     ], delay=8)
 
@@ -117,10 +127,6 @@ def main():
 # ─── Entry Point ──────────────────────────────────────────────────────────
 if __name__ == "__main__":
     setup_logging()
-
-    if "VIRTUAL_ENV" not in os.environ:
-        logging.warning("⚠️ Not running inside virtualenv—Playwright may not be available")
-
     try:
         main()
     except Exception as e:
