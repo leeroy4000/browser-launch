@@ -97,16 +97,17 @@ def main():
         logging.info("🛑 Not on Guest WiFi — skipping captive portal flow.")
 
     open_tabs([
+        "http://192.168.1.126:8123/dashboard-default/0",     # Home Assistant
+        "http://192.168.1.127:5020/",                        # Frigate
         "https://192.168.1.124:8006/#v1:0:18:4:::::::",      # Proxmox
         "https://192.168.1.101/",                             # pfSense
         "https://192.168.1.102/admin/",                       # Pi-hole
         "https://192.168.1.129:8043/#dashboard",             # Omada
-        "http://192.168.1.126:8123/dashboard-default/0",     # Home Assistant
-        "http://192.168.1.127:5020/",                        # Frigate
         "http://192.168.1.127:9000/#!/3/docker/containers"   # Portainer
     ])
 
     open_tabs([
+        "http://10.10.0.2:8080",                            # Open Web UI
         "https://copilot.microsoft.com/",                   # Copilot
         "https://suno.com/"                                 # Suno
     ], delay=4)
