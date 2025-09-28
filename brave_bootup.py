@@ -97,16 +97,17 @@ def main():
         logging.info("🛑 Not on UnityPoint Guest WiFi — skipping captive portal flow.")
 
     open_tabs([
+        "http://192.168.1.26:8123/dashboard-default/0",     # Home Assistant
+        "http://192.168.1.27:5020/",                        # Frigate
         "https://192.168.1.24:8006/#v1:0:18:4:::::::",      # Proxmox
         "https://192.168.1.1/",                             # pfSense
         "https://192.168.1.2/admin/",                       # Pi-hole
         "https://192.168.1.29:8043/#dashboard",             # Omada
-        "http://192.168.1.26:8123/dashboard-default/0",     # Home Assistant
-        "http://192.168.1.27:5020/",                        # Frigate
         "http://192.168.1.27:9000/#!/3/docker/containers"   # Portainer
     ])
 
     open_tabs([
+        "http://10.10.0.2:8080",                            # Open Web UI
         "https://copilot.microsoft.com/",                   # Copilot
         "https://suno.com/"                                 # Suno
     ], delay=4)
