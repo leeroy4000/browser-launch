@@ -97,24 +97,25 @@ def main():
         logging.info("🛑 Not on Guest WiFi — skipping captive portal flow.")
 
     open_tabs([
-        "http://192.168.1.126:8123/dashboard-default/0",     # Home Assistant
-        "http://192.168.1.127:5020/",                        # Frigate
-        "https://192.168.1.124:8006/#v1:0:18:4:::::::",      # Proxmox
-        "https://192.168.1.101/",                             # pfSense
-        "https://192.168.1.102/admin/",                       # Pi-hole
-        "https://192.168.1.129:8043/#dashboard",             # Omada
-        "http://192.168.1.127:9000/#!/3/docker/containers"   # Portainer
+        "http://192.168.1.126:8123/dashboard-default/0",        # Home Assistant
+        "https://frigate.example.com/",                 # Frigate
+        "https://192.168.1.124:8006/#v1:0:18:4:::::::",         # Proxmox
+        "https://192.168.1.101/",                                # pfSense
+        "https://192.168.1.102/admin/",                          # Pi-hole
+        "https://192.168.1.129:8043/#dashboard",                # Omada
+        "https://portainer.example.com/"                # Portainer
     ])
 
     open_tabs([
-        "http://10.10.0.2:8080",                            # Open Web UI
-        "https://copilot.microsoft.com/",                   # Copilot
-        "https://suno.com/"                                 # Suno
+        "http://10.10.0.2:8080",                                # Open Web UI
+        "https://copilot.microsoft.com/",                       # Copilot
+        "https://suno.com/",                                    # Suno
+        "https://github.com/copilot"                            # Github Copilot
     ], delay=4)
 
     open_tabs([
         "https://www.youtube.com/",
-        "http://192.168.1.127:8096/web/#/home.html",         # Jellyfin
+        "https://jellyfin.example.com/web/#/home.html",        # Jellyfin
         "https://www.amazon.com/gp/video/storefront"
     ], delay=8)
 
