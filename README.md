@@ -99,7 +99,7 @@ windows:
 
 # General settings
 settings:
-  wait_before_start: 10          # Wait for desktop environment
+  wait_before_start: 20          # Wait for desktop environment
   health_check_timeout: 3        # Timeout for service checks
   log_file: "/var/log/browser-launch/startup.log"
   brave_path: "/usr/bin/brave-browser"

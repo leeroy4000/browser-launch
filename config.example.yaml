@@ -5,15 +5,21 @@
 
 # Captive Portal Configuration (Optional)
 # ----------------------------------------
-# Configure this if you connect to WiFi networks that require
-# accepting terms before internet access (like corporate/guest WiFi)
-captive_portal:
-  enabled: false                              # Set to true to enable
-  ssid: "Guest WiFi"                          # WiFi network name
-  url: "https://login.example.com/"           # Captive portal URL
-  accept_button_selector: 'input[value="Accept"]'  # CSS selector for accept button
-  max_retries: 3                              # Number of retry attempts
-  retry_delay: 2                              # Seconds between retries
+# Configure WiFi networks that require accepting terms before internet access.
+# You can add multiple portals for different locations.
+captive_portals:
+  - ssid: "Guest WiFi"
+    url: "https://login.example.com/"
+    accept_button_selector: 'input[value="Accept"]'
+    max_retries: 3
+    retry_delay: 2
+  
+  # Add more portals as needed
+  # - ssid: "Coffee Shop WiFi"
+  #   url: "https://portal.coffeeshop.com/"
+  #   accept_button_selector: 'button#accept'
+  #   max_retries: 3
+  #   retry_delay: 2
 
 # Browser Windows and Tabs
 # -------------------------
@@ -106,7 +112,7 @@ windows:
 # General Settings
 # ----------------
 settings:
-  wait_before_start: 10                       # Seconds to wait for desktop environment to load
+  wait_before_start: 20                       # Seconds to wait for desktop environment to load
   health_check_timeout: 3                     # Seconds to wait for each service to respond
   log_file: "/var/log/browser-launch/startup.log"  # Log file location (falls back to ~/.local/share if no permission)
   brave_path: "/usr/bin/brave-browser"        # Path to browser executable
@@ -138,6 +144,9 @@ settings:
 #    - Chromium: /usr/bin/chromium
 #
 # 5. CAPTIVE PORTAL
+#    To add a new portal after initial setup:
+#    - Run: ./browser-launch.py --add-portal
+#    
 #    To find the button selector:
 #    - Open the captive portal page
 #    - Right-click "Accept" button → Inspect
