@@ -1,55 +1,328 @@
-# 🦁 Brave Bootup Automation Script
+# Browser Launch
 
-This Python script automates the launch of the Brave browser in a multi-tab configuration, with optional captive portal acceptance for UnityPoint Guest WiFi. It’s designed to run at login via autostart and is optimized for home lab and productivity workflows.
+Automate your browser startup on Linux with configurable tabs, health checks, and captive portal handling.
 
-## 📌 Purpose
+## Features
 
-- Detects UnityPoint Guest WiFi and accepts captive portal login
-- Launches multiple Brave browser windows with predefined tabs
-- Logs activity to `/var/log/brave/startup.log`
-- Designed to run inside a Python virtual environment with Playwright
+- 🚀 **Auto-launch at boot** - Opens your browser with organized tabs automatically
+- 🏥 **Health checks** - Skip tabs for services that are down
+- 📶 **Captive portal support** - Auto-accept WiFi login pages
+- 🔧 **Interactive setup** - Easy configuration wizard
+- 🌐 **Multi-browser support** - Works with Brave, Firefox, Chrome, Chromium
+- 📝 **YAML configuration** - Simple file editing for tab management
+- ⚙️ **systemd integration** - Proper service management
 
-## 🚀 Usage
+## Quick Start
 
-This script is automatically triggered at login if installed via the companion setup script (`setup_brave_environment.sh`). To run manually:
+### 1. Download the script
 
 ```bash
-~/.brave_env/bin/python /usr/local/bin/brave_bootup.py
+git clone https://github.com/yourusername/browser-launch.git
+cd browser-launch
+chmod +x browser-launch.py
 ```
 
-> ⚠️ Requires Brave browser and Playwright installed in a virtual environment. (See setup_brave_environment.sh repo)
+### 2. Run setup wizard
 
-
-## 📡 Captive Portal Detection
-
-If connected to `UnityPoint Guest wifi`, the script:
-- Launches Brave to the login page
-- Waits for and clicks the "Accept" button
-- Closes the initial window before launching additional windows and tabs
-
-## 🧾 Logging
-
-Logs are written to:
-
-```
-/var/log/brave/startup.log
+```bash
+./browser-launch.py
 ```
 
-Includes:
-- WiFi detection status
-- Captive portal interaction
-- Tab launch confirmations
-- Exception traces (if any)
+The setup wizard will:
+- Detect installed browsers
+- Configure captive portal (if needed)
+- Set up your tabs and windows
+- Install systemd service (optional)
 
-## 🛠 Requirements
+### 3. Done!
 
-- Brave browser installed at `/usr/bin/brave-browser`
-- Python 3 with Playwright installed
-- NetworkManager (`nmcli`) for SSID detection
-- Autostart configured via `.desktop` file (optional)
+Your browser will now launch automatically at boot with your configured tabs.
 
-## ⚙️ Notes
+## Configuration
 
-- Script assumes it's running inside a virtual environment (`~/.brave_env`)
-- Shebang is auto-updated by the setup script
-- Adjust tab URLs in the `main()` function to suit your environment
+The configuration file is stored at `~/Documents/Coding/Configs/browser-launch.yaml`
+
+### Example Configuration
+
+```yaml
+# Captive portal settings (optional)
+captive_portal:
+  enabled: true
+  ssid: "Corporate WiFi"
+  url: "https://login.corporate.com/"
+  accept_button_selector: 'input[value="Accept"]'
+  max_retries: 3
+  retry_delay: 2
+
+# Browser windows
+windows:
+  # Development tools
+  dev:
+    delay: 0
+    health_check: true
+    tabs:
+      - name: "GitHub"
+        url: "https://github.com/"
+      
+      - name: "Local API"
+        url: "http://localhost:3000"
+      
+      - name: "Documentation"
+        url: "http://localhost:8080/docs"
+  
+  # Monitoring
+  monitoring:
+    delay: 4
+    health_check: true
+    tabs:
+      - name: "Grafana"
+        url: "http://192.168.1.10:3000"
+      
+      - name: "Prometheus"
+        url: "http://192.168.1.10:9090"
+  
+  # General
+  general:
+    delay: 8
+    health_check: false
+    tabs:
+      - name: "Email"
+        url: "https://mail.google.com"
+      
+      - name: "Calendar"
+        url: "https://calendar.google.com"
+
+# General settings
+settings:
+  wait_before_start: 10          # Wait for desktop environment
+  health_check_timeout: 3        # Timeout for service checks
+  log_file: "/var/log/browser-launch/startup.log"
+  brave_path: "/usr/bin/brave-browser"
+```
+
+## Usage
+
+### Run normally
+```bash
+./browser-launch.py
+```
+
+### Run setup wizard again
+```bash
+./browser-launch.py --setup
+```
+
+### Install systemd service
+```bash
+./browser-launch.py --install
+```
+
+### Uninstall systemd service
+```bash
+./browser-launch.py --uninstall
+```
+
+### Force run (skip wizard even if no config)
+```bash
+./browser-launch.py --run
+```
+
+## Managing the Service
+
+### Check service status
+```bash
+systemctl --user status browser-launch
+```
+
+### Disable auto-start
+```bash
+systemctl --user disable browser-launch
+```
+
+### Enable auto-start
+```bash
+systemctl --user enable browser-launch
+```
+
+### View logs
+```bash
+journalctl --user -u browser-launch
+# or
+cat ~/.local/share/browser-launch/startup.log
+```
+
+## Adding/Removing Tabs
+
+Edit `~/Documents/Coding/Configs/browser-launch.yaml` and add or remove tab entries.
+
+### Add a new window
+```yaml
+windows:
+  my_new_window:
+    delay: 5
+    health_check: true
+    tabs:
+      - name: "Example Site"
+        url: "https://example.com"
+```
+
+### Add a tab to existing window
+```yaml
+windows:
+  dev:
+    tabs:
+      - name: "New Service"
+        url: "http://localhost:5000"
+```
+
+Changes take effect on next boot (or next manual run).
+
+## Captive Portal Setup
+
+If you connect to WiFi networks that require accepting terms:
+
+1. Run setup wizard: `./browser-launch.py --setup`
+2. Enable captive portal support
+3. Provide:
+   - WiFi network name (SSID)
+   - Login page URL
+   - Accept button CSS selector (default usually works)
+
+The script will automatically accept the terms page before opening your tabs.
+
+### Finding the button selector
+
+1. Open the captive portal page in your browser
+2. Right-click the "Accept" button → Inspect
+3. Look for the button's HTML, e.g., `<input type="submit" value="Accept">`
+4. The selector is `input[value="Accept"]`
+
+## Health Checks
+
+When enabled for a window, the script pings each URL before opening it. If a service is down, that tab is skipped.
+
+This is useful for:
+- Local development servers that may not be running
+- Home lab services that might be offline
+- Network monitoring tools
+
+Public HTTPS sites (like GitHub, Gmail) skip health checks automatically.
+
+## Dependencies
+
+The script auto-installs required Python packages:
+- `pyyaml` - Configuration file handling
+- `requests` - HTTP requests and health checks
+- `playwright` - (Optional) Captive portal automation
+
+## Troubleshooting
+
+### Browser doesn't open at boot
+
+1. Check if service is enabled:
+   ```bash
+   systemctl --user is-enabled browser-launch
+   ```
+
+2. Check service logs:
+   ```bash
+   journalctl --user -u browser-launch -n 50
+   ```
+
+3. Verify config file exists:
+   ```bash
+   ls -la ~/Documents/Coding/Configs/browser-launch.yaml
+   ```
+
+### Config file missing
+
+Run the setup wizard again:
+```bash
+./browser-launch.py --setup
+```
+
+### Tabs not opening
+
+1. Check if health checks are failing:
+   ```bash
+   cat ~/.local/share/browser-launch/startup.log
+   ```
+
+2. Temporarily disable health checks in config:
+   ```yaml
+   windows:
+     my_window:
+       health_check: false
+   ```
+
+### Captive portal not working
+
+1. Verify Playwright is installed:
+   ```bash
+   python3 -m playwright --version
+   ```
+
+2. Check the button selector is correct
+3. Increase retry attempts in config:
+   ```yaml
+   captive_portal:
+     max_retries: 5
+   ```
+
+### Permissions error on log file
+
+The script will automatically fallback to `~/.local/share/brave-bootup/startup.log` if it can't write to `/var/log/`.
+
+## Example Use Cases
+
+### Home Lab Dashboard
+Open monitoring tools and management interfaces:
+- Home Assistant
+- Proxmox
+- Pi-hole
+- pfSense
+- Grafana
+
+### Developer Workflow
+Launch your development environment:
+- Local dev server
+- API documentation
+- Database admin panel
+- GitHub
+- Slack
+
+### Media Center
+Entertainment tabs:
+- YouTube
+- Jellyfin/Plex
+- Streaming services
+
+### Trading/Finance
+Market monitoring:
+- Trading platforms
+- News sites
+- Portfolio trackers
+- Market data
+
+## Contributing
+
+Contributions welcome! Please:
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Submit a pull request
+
+## License
+
+MIT License - see LICENSE file for details
+
+## Support
+
+- 🐛 Report bugs: [GitHub Issues](https://github.com/yourusername/browser-launch/issues)
+- 💡 Feature requests: [GitHub Discussions](https://github.com/yourusername/browser-launch/discussions)
+
+## Credits
+
+Created by [Your Name]
+
+Inspired by the need to automate repetitive browser setup tasks on Linux systems.
