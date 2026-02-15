@@ -46,13 +46,18 @@ The configuration file is stored at `~/Documents/Coding/Configs/browser-launch.y
 
 ```yaml
 # Captive portal settings (optional)
-captive_portal:
-  enabled: true
-  ssid: "Corporate WiFi"
-  url: "https://login.corporate.com/"
-  accept_button_selector: 'input[value="Accept"]'
-  max_retries: 3
-  retry_delay: 2
+captive_portals:
+  - ssid: "Corporate WiFi"
+    url: "https://login.corporate.com/"
+    accept_button_selector: 'input[value="Accept"]'
+    max_retries: 3
+    retry_delay: 2
+  
+  - ssid: "Starbucks WiFi"
+    url: "https://portal.starbucks.com/"
+    accept_button_selector: 'button#accept'
+    max_retries: 3
+    retry_delay: 2
 
 # Browser windows
 windows:
@@ -110,6 +115,11 @@ settings:
 ### Run setup wizard again
 ```bash
 ./browser-launch.py --setup
+```
+
+### Add a new captive portal
+```bash
+./browser-launch.py --add-portal
 ```
 
 ### Install systemd service
@@ -179,14 +189,31 @@ Changes take effect on next boot (or next manual run).
 
 ## Captive Portal Setup
 
-If you connect to WiFi networks that require accepting terms:
+The script supports **multiple captive portals** for different WiFi networks.
 
-1. Run setup wizard: `./browser-launch.py --setup`
-2. Enable captive portal support
-3. Provide:
-   - WiFi network name (SSID)
-   - Login page URL
-   - Accept button CSS selector (default usually works)
+### During Initial Setup
+
+The setup wizard allows you to add one or more captive portals. You can add portals for all the WiFi networks you regularly use (work, coffee shops, home guest network, etc.).
+
+### Adding More Portals Later
+
+When you connect to a new WiFi network with a captive portal:
+
+```bash
+./browser-launch.py --add-portal
+```
+
+This will:
+1. Keep your existing configuration
+2. Ask for the new portal details
+3. Add it to your config file
+
+### Portal Configuration
+
+For each portal, you need:
+- **WiFi network name (SSID)** - Exact name of the network
+- **Login page URL** - The captive portal address
+- **Accept button selector** - CSS selector for the accept button (default usually works)
 
 The script will automatically accept the terms page before opening your tabs.
 
