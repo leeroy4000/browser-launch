@@ -1,0 +1,152 @@
+# Browser Launch Configuration
+# ============================
+# This is an example configuration showing various use cases.
+# Copy this to ~/Documents/Coding/Configs/browser-launch.yaml and customize.
+
+# Captive Portal Configuration (Optional)
+# ----------------------------------------
+# Configure this if you connect to WiFi networks that require
+# accepting terms before internet access (like corporate/guest WiFi)
+captive_portal:
+  enabled: false                              # Set to true to enable
+  ssid: "Guest WiFi"                          # WiFi network name
+  url: "https://login.example.com/"           # Captive portal URL
+  accept_button_selector: 'input[value="Accept"]'  # CSS selector for accept button
+  max_retries: 3                              # Number of retry attempts
+  retry_delay: 2                              # Seconds between retries
+
+# Browser Windows and Tabs
+# -------------------------
+# Organize tabs into separate browser windows.
+# Each window can have a delay and optional health checks.
+windows:
+  
+  # Example: Home Lab Monitoring
+  homelab:
+    delay: 0                                  # Open immediately
+    health_check: true                        # Check if services are running
+    tabs:
+      - name: "Home Assistant"
+        url: "http://192.168.1.100:8123"
+      
+      - name: "Proxmox"
+        url: "https://192.168.1.10:8006"
+      
+      - name: "Pi-hole"
+        url: "http://192.168.1.5/admin"
+      
+      - name: "Portainer"
+        url: "https://192.168.1.10:9443"
+  
+  # Example: Development Environment
+  development:
+    delay: 4                                  # Wait 4 seconds before opening
+    health_check: true
+    tabs:
+      - name: "Local API Server"
+        url: "http://localhost:3000"
+      
+      - name: "Frontend Dev Server"
+        url: "http://localhost:5173"
+      
+      - name: "API Documentation"
+        url: "http://localhost:8080/docs"
+      
+      - name: "Database Admin"
+        url: "http://localhost:8081"
+      
+      - name: "GitHub"
+        url: "https://github.com/"
+  
+  # Example: Productivity Tools
+  productivity:
+    delay: 8
+    health_check: false                       # No health checks for public sites
+    tabs:
+      - name: "Email"
+        url: "https://mail.proton.me/u/0/inbox"
+      
+      - name: "Calendar"
+        url: "https://calendar.google.com"
+      
+      - name: "Notion"
+        url: "https://www.notion.so/"
+      
+      - name: "Slack"
+        url: "https://app.slack.com/client/"
+  
+  # Example: Media & Entertainment
+  media:
+    delay: 12
+    health_check: true
+    tabs:
+      - name: "YouTube"
+        url: "https://www.youtube.com/"
+      
+      - name: "Jellyfin"
+        url: "http://192.168.1.20:8096"
+      
+      - name: "Spotify"
+        url: "https://open.spotify.com/"
+  
+  # Example: Network Monitoring
+  monitoring:
+    delay: 4
+    health_check: true
+    tabs:
+      - name: "Grafana"
+        url: "http://192.168.1.30:3000"
+      
+      - name: "Prometheus"
+        url: "http://192.168.1.30:9090"
+      
+      - name: "Uptime Kuma"
+        url: "http://192.168.1.30:3001"
+
+# General Settings
+# ----------------
+settings:
+  wait_before_start: 10                       # Seconds to wait for desktop environment to load
+  health_check_timeout: 3                     # Seconds to wait for each service to respond
+  log_file: "/var/log/browser-launch/startup.log"  # Log file location (falls back to ~/.local/share if no permission)
+  brave_path: "/usr/bin/brave-browser"        # Path to browser executable
+
+# ==================================
+# CONFIGURATION TIPS
+# ==================================
+#
+# 1. DELAYS
+#    Use delays to stagger window opening and reduce system load.
+#    Delays are cumulative - a 4-second delay means "4 seconds after the previous window"
+#
+# 2. HEALTH CHECKS
+#    Enable for local services that might not be running.
+#    Disable for public HTTPS sites (they're checked automatically anyway).
+#    Unreachable services are skipped and logged.
+#
+# 3. TAB ORGANIZATION
+#    Group related tabs into windows:
+#    - Work vs Personal
+#    - Development vs Monitoring
+#    - Local Services vs Cloud Services
+#
+# 4. BROWSER PATHS
+#    Common paths:
+#    - Brave: /usr/bin/brave-browser or /snap/bin/brave
+#    - Firefox: /usr/bin/firefox
+#    - Chrome: /usr/bin/google-chrome
+#    - Chromium: /usr/bin/chromium
+#
+# 5. CAPTIVE PORTAL
+#    To find the button selector:
+#    - Open the captive portal page
+#    - Right-click "Accept" button → Inspect
+#    - Look for: <input type="submit" value="Accept">
+#    - Selector is: input[value="Accept"]
+#
+# 6. LOGS
+#    Check logs for troubleshooting:
+#    - Service logs: journalctl --user -u browser-launch
+#    - Script logs: cat ~/.local/share/browser-launch/startup.log
+#
+# ==================================
