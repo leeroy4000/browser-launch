@@ -390,7 +390,7 @@ def run_setup_wizard():
         'captive_portals': captive_portals,
         'windows': windows,
         'settings': {
-            'wait_before_start': 10,
+            'wait_before_start': 20,
             'health_check_timeout': 3,
             'log_file': '/var/log/browser-launch/startup.log',
             'brave_path': browser_path
@@ -459,6 +459,7 @@ After=graphical-session.target
 
 [Service]
 Type=oneshot
+ExecStartPre=/bin/sleep 8
 ExecStart={sys.executable} {script_path} --run
 Environment="DISPLAY=:0"
 Environment="XAUTHORITY=%h/.Xauthority"
@@ -772,6 +773,8 @@ def open_tabs(window_name, tabs, delay=0, health_check=False, timeout=3, browser
         try:
             subprocess.Popen([browser_path, "--new-window"] + urls_to_open)
             logging.info(f"✅ Opened {window_name} window with {len(urls_to_open)}/{len(tabs)} tab(s)")
+            # Give browser time to process this window before launching the next one
+            time.sleep(3)
         except Exception as e:
             logging.exception(f"❌ Failed to open {window_name} window: {e}")
     else:
@@ -848,7 +851,7 @@ Examples:
     setup_logging(settings.get('log_file', '/var/log/browser-launch/startup.log'))
     
     # Wait for desktop environment
-    wait_time = settings.get('wait_before_start', 10)
+    wait_time = settings.get('wait_before_start', 20)
     logging.info(f"Waiting {wait_time}s for desktop environment")
     time.sleep(wait_time)
     
