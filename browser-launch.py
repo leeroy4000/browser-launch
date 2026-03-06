@@ -29,7 +29,7 @@ import argparse
 # ==============================================================================
 
 VERSION = "2.0.0"
-CONFIG_DIR = Path.home() / "Documents" / "Coding" / "Configs"
+CONFIG_DIR = Path.home() / "Documents" / "Configs"
 CONFIG_FILE = CONFIG_DIR / "browser-launch.yaml"
 SERVICE_NAME = "browser-launch"
 
