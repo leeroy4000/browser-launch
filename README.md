@@ -40,7 +40,7 @@ Your browser will now launch automatically at boot with your configured tabs.
 
 ## Configuration
 
-The configuration file is stored at `~/Documents/Coding/Configs/browser-launch.yaml`
+The configuration file is stored at `~/Documents/Configs/browser-launch.yaml`
 
 ### Example Configuration
 

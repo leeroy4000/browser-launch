@@ -405,6 +405,13 @@ def run_setup_wizard():
     
     CONFIG_DIR.mkdir(parents=True, exist_ok=True)
     
+    if CONFIG_FILE.exists():
+        print(f"⚠️  Configuration file already exists: {CONFIG_FILE}")
+        overwrite = input("Overwrite existing configuration? (y/n): ").strip().lower()
+        if overwrite != 'y':
+            print("Setup cancelled. Existing configuration preserved.")
+            return
+    
     with open(CONFIG_FILE, 'w') as f:
         yaml.dump(config, f, default_flow_style=False, sort_keys=False)
     
@@ -458,7 +465,8 @@ Description=Browser Auto-Launch
 After=graphical-session.target
 
 [Service]
-Type=oneshot
+Type=forking
+RemainAfterExit=yes
 ExecStartPre=/bin/sleep 8
 ExecStart={sys.executable} {script_path} --run
 Environment="DISPLAY=:0"
@@ -479,6 +487,12 @@ WantedBy=default.target
         # Reload systemd and enable service
         subprocess.run(['systemctl', '--user', 'daemon-reload'], check=True)
         subprocess.run(['systemctl', '--user', 'enable', f'{SERVICE_NAME}.service'], check=True)
+        
+        # Remove .desktop autostart file if present to prevent double-launch
+        desktop_file = Path.home() / ".config" / "autostart" / "brave-bootup.desktop"
+        if desktop_file.exists():
+            desktop_file.unlink()
+            print(f"✅ Removed conflicting autostart .desktop file")
         
         print(f"✅ systemd service installed and enabled")
         print(f"   Service file: {service_file}")
