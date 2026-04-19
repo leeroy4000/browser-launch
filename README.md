@@ -4,13 +4,13 @@ Automate your browser startup on Linux with configurable tabs, health checks, an
 
 ## Features
 
-- 🚀 **Auto-launch at boot** - Opens your browser with organized tabs automatically
+- 🚀 **Auto-launch at login** - Opens your browser with organized tabs automatically
 - 🏥 **Health checks** - Skip tabs for services that are down
 - 📶 **Captive portal support** - Auto-accept WiFi login pages
 - 🔧 **Interactive setup** - Easy configuration wizard
 - 🌐 **Multi-browser support** - Works with Brave, Firefox, Chrome, Chromium
 - 📝 **YAML configuration** - Simple file editing for tab management
-- ⚙️ **systemd integration** - Proper service management
+- ⚙️ **systemd integration** - Optional service management
 
 ## Quick Start
 
@@ -36,7 +36,7 @@ The setup wizard will:
 
 ### 3. Done!
 
-Your browser will now launch automatically at boot with your configured tabs.
+Your browser will now launch automatically at login with your configured tabs.
 
 ## Configuration
 
@@ -46,63 +46,43 @@ The configuration file is stored at `~/Documents/Configs/browser-launch.yaml`
 
 ```yaml
 # Captive portal settings (optional)
-captive_portals:
-  - ssid: "Corporate WiFi"
-    url: "https://login.corporate.com/"
-    accept_button_selector: 'input[value="Accept"]'
-    max_retries: 3
-    retry_delay: 2
-  
-  - ssid: "Starbucks WiFi"
-    url: "https://portal.starbucks.com/"
-    accept_button_selector: 'button#accept'
-    max_retries: 3
-    retry_delay: 2
+captive_portals: []
+  # - ssid: "Guest WiFi"
+  #   url: "https://login.example.com/"
+  #   accept_button_selector: 'input[value="Accept"]'
+  #   max_retries: 3
+  #   retry_delay: 2
 
 # Browser windows
 windows:
-  # Development tools
-  dev:
-    delay: 0
+  # Network monitoring and infrastructure
+  Network:
+    delay: 2
     health_check: true
     tabs:
-      - name: "GitHub"
-        url: "https://github.com/"
-      
-      - name: "Local API"
-        url: "http://localhost:3000"
-      
-      - name: "Documentation"
-        url: "http://localhost:8080/docs"
-  
-  # Monitoring
-  monitoring:
-    delay: 4
+      - name: Home Assistant
+        url: http://192.168.1.9:8123/dashboard-default/0
+
+      - name: Proxmox
+        url: 'https://192.168.1.8:8006/#v1:0:18:4:::::::'
+
+  # AI tools and productivity
+  AI:
+    delay: 5
     health_check: true
     tabs:
-      - name: "Grafana"
-        url: "http://192.168.1.10:3000"
-      
-      - name: "Prometheus"
-        url: "http://192.168.1.10:9090"
-  
-  # General
-  general:
-    delay: 8
-    health_check: false
-    tabs:
-      - name: "Email"
-        url: "https://mail.google.com"
-      
-      - name: "Calendar"
-        url: "https://calendar.google.com"
+      - name: Claude
+        url: https://claude.ai/
+
+      - name: Github Copilot
+        url: https://github.com/copilot
 
 # General settings
 settings:
-  wait_before_start: 20          # Wait for desktop environment
-  health_check_timeout: 3        # Timeout for service checks
-  log_file: "/var/log/browser-launch/startup.log"
-  brave_path: "/usr/bin/brave-browser"
+  wait_before_start: 15        # Seconds to wait for desktop environment
+  health_check_timeout: 3      # Seconds to wait for each service response
+  log_file: /var/log/browser-launch/startup.log
+  brave_path: /usr/bin/brave-browser
 ```
 
 ## Usage
@@ -110,6 +90,11 @@ settings:
 ### Run normally
 ```bash
 ./browser-launch.py
+```
+
+### Force run (skip setup wizard)
+```bash
+./browser-launch.py --run
 ```
 
 ### Run setup wizard again
@@ -132,38 +117,33 @@ settings:
 ./browser-launch.py --uninstall
 ```
 
-### Force run (skip wizard even if no config)
-```bash
-./browser-launch.py --run
+## Autostart
+
+Browser Launch uses a `.desktop` autostart entry by default, which fires at login after the desktop environment is ready. This is the recommended approach for launching a graphical browser.
+
+The autostart file is located at:
+```
+~/.config/autostart/brave-bootup.desktop
 ```
 
-## Managing the Service
+Optionally, a systemd user service can be installed instead via `--install`.
 
-### Check service status
+## Managing the Service (if installed)
+
 ```bash
+# Check status
 systemctl --user status browser-launch
-```
 
-### Disable auto-start
-```bash
+# Disable auto-start
 systemctl --user disable browser-launch
-```
 
-### Enable auto-start
-```bash
+# Enable auto-start
 systemctl --user enable browser-launch
-```
-
-### View logs
-```bash
-journalctl --user -u browser-launch
-# or
-cat ~/.local/share/browser-launch/startup.log
 ```
 
 ## Adding/Removing Tabs
 
-Edit `~/Documents/Coding/Configs/browser-launch.yaml` and add or remove tab entries.
+Edit `~/Documents/Configs/browser-launch.yaml` and add or remove tab entries. Changes take effect on next login or manual run.
 
 ### Add a new window
 ```yaml
@@ -176,64 +156,60 @@ windows:
         url: "https://example.com"
 ```
 
-### Add a tab to existing window
+### Add a tab to an existing window
 ```yaml
 windows:
-  dev:
+  Network:
     tabs:
       - name: "New Service"
-        url: "http://localhost:5000"
+        url: "http://192.168.1.20:3000"
 ```
 
-Changes take effect on next boot (or next manual run).
+## Health Checks
+
+When enabled for a window, the script checks each URL before opening it. Unreachable services are skipped and logged.
+
+Public HTTPS sites (those starting with `https://www.`, `https://mail.`, or `https://github.`) skip health checks automatically.
+
+This is useful for:
+- Local homelab services that may not always be running
+- Home automation and monitoring tools
+- Development servers
+
+## Logging
+
+Logs are written to `/var/log/browser-launch/startup.log` by default.
+
+```bash
+cat /var/log/browser-launch/startup.log
+```
+
+If `/var/log/browser-launch/` is not writable, the script falls back to:
+```
+~/.local/share/browser-launch/startup.log
+```
+
+To create the log directory with correct permissions:
+```bash
+sudo mkdir -p /var/log/browser-launch && sudo chown $USER:$USER /var/log/browser-launch
+```
 
 ## Captive Portal Setup
 
-The script supports **multiple captive portals** for different WiFi networks.
+The script supports multiple captive portals for different WiFi networks.
 
-### During Initial Setup
-
-The setup wizard allows you to add one or more captive portals. You can add portals for all the WiFi networks you regularly use (work, coffee shops, home guest network, etc.).
-
-### Adding More Portals Later
-
-When you connect to a new WiFi network with a captive portal:
+### Adding Portals
 
 ```bash
 ./browser-launch.py --add-portal
 ```
 
-This will:
-1. Keep your existing configuration
-2. Ask for the new portal details
-3. Add it to your config file
-
-### Portal Configuration
-
-For each portal, you need:
-- **WiFi network name (SSID)** - Exact name of the network
-- **Login page URL** - The captive portal address
-- **Accept button selector** - CSS selector for the accept button (default usually works)
-
-The script will automatically accept the terms page before opening your tabs.
-
-### Finding the button selector
+### Finding the Button Selector
 
 1. Open the captive portal page in your browser
 2. Right-click the "Accept" button → Inspect
-3. Look for the button's HTML, e.g., `<input type="submit" value="Accept">`
-4. The selector is `input[value="Accept"]`
-
-## Health Checks
-
-When enabled for a window, the script pings each URL before opening it. If a service is down, that tab is skipped.
-
-This is useful for:
-- Local development servers that may not be running
-- Home lab services that might be offline
-- Network monitoring tools
-
-Public HTTPS sites (like GitHub, Gmail) skip health checks automatically.
+3. Look for something like: `<input type="submit" value="Accept">`
+4. The selector would be: `input[value="Accept"]`
 
 ## Dependencies
 
@@ -242,45 +218,56 @@ The script auto-installs required Python packages:
 - `requests` - HTTP requests and health checks
 - `playwright` - (Optional) Captive portal automation
 
+To install manually:
+```bash
+pip3 install --user --break-system-packages pyyaml requests
+```
+
+For captive portal support:
+```bash
+pip3 install --user --break-system-packages playwright
+python3 -m playwright install chromium
+```
+
 ## Troubleshooting
 
-### Browser doesn't open at boot
+### Browser doesn't open at login
 
-1. Check if service is enabled:
+1. Check the log:
    ```bash
-   systemctl --user is-enabled browser-launch
+   cat /var/log/browser-launch/startup.log
    ```
 
-2. Check service logs:
+2. Try running manually:
    ```bash
-   journalctl --user -u browser-launch -n 50
+   ./browser-launch.py --run
    ```
 
 3. Verify config file exists:
    ```bash
-   ls -la ~/Documents/Coding/Configs/browser-launch.yaml
+   ls -la ~/Documents/Configs/browser-launch.yaml
    ```
+
+### Tabs not opening (health check failures)
+
+Check the log to see which services are being skipped:
+```bash
+cat /var/log/browser-launch/startup.log
+```
+
+To temporarily disable health checks for a window:
+```yaml
+windows:
+  Network:
+    health_check: false
+```
 
 ### Config file missing
 
-Run the setup wizard again:
+Run the setup wizard:
 ```bash
 ./browser-launch.py --setup
 ```
-
-### Tabs not opening
-
-1. Check if health checks are failing:
-   ```bash
-   cat ~/.local/share/browser-launch/startup.log
-   ```
-
-2. Temporarily disable health checks in config:
-   ```yaml
-   windows:
-     my_window:
-       health_check: false
-   ```
 
 ### Captive portal not working
 
@@ -289,47 +276,30 @@ Run the setup wizard again:
    python3 -m playwright --version
    ```
 
-2. Check the button selector is correct
+2. Check the button selector is correct for your portal page.
+
 3. Increase retry attempts in config:
    ```yaml
-   captive_portal:
-     max_retries: 5
+   captive_portals:
+     - ssid: "My Network"
+       max_retries: 5
    ```
 
-### Permissions error on log file
+## Uninstallation
 
-The script will automatically fallback to `~/.local/share/brave-bootup/startup.log` if it can't write to `/var/log/`.
+```bash
+# Remove systemd service (if installed)
+./browser-launch.py --uninstall
 
-## Example Use Cases
+# Remove config file
+rm ~/Documents/Configs/browser-launch.yaml
 
-### Home Lab Dashboard
-Open monitoring tools and management interfaces:
-- Home Assistant
-- Proxmox
-- Pi-hole
-- pfSense
-- Grafana
+# Remove autostart entry
+rm ~/.config/autostart/brave-bootup.desktop
 
-### Developer Workflow
-Launch your development environment:
-- Local dev server
-- API documentation
-- Database admin panel
-- GitHub
-- Slack
-
-### Media Center
-Entertainment tabs:
-- YouTube
-- Jellyfin/Plex
-- Streaming services
-
-### Trading/Finance
-Market monitoring:
-- Trading platforms
-- News sites
-- Portfolio trackers
-- Market data
+# Remove script
+sudo rm /usr/local/bin/browser-launch.py
+```
 
 ## Contributing
 
@@ -342,14 +312,3 @@ Contributions welcome! Please:
 ## License
 
 MIT License - see LICENSE file for details
-
-## Support
-
-- 🐛 Report bugs: [GitHub Issues](https://github.com/yourusername/browser-launch/issues)
-- 💡 Feature requests: [GitHub Discussions](https://github.com/yourusername/browser-launch/discussions)
-
-## Credits
-
-Created by [Your Name]
-
-Inspired by the need to automate repetitive browser setup tasks on Linux systems.
