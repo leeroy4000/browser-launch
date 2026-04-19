@@ -2,10 +2,9 @@
 
 ## Prerequisites
 
-- Linux system with systemd (most modern distributions)
+- Linux system with a graphical desktop environment
 - Python 3.6 or higher
 - One of: Brave, Firefox, Chrome, or Chromium browser
-- Internet connection
 
 ## Step-by-Step Installation
 
@@ -19,100 +18,122 @@ cd browser-launch
 
 **Option B: Manual download**
 ```bash
-# Download the script
 wget https://raw.githubusercontent.com/yourusername/browser-launch/main/browser-launch.py
-
-# Make it executable
 chmod +x browser-launch.py
 ```
 
-### 2. Run the Setup Wizard
+### 2. Install to system path (recommended)
 
 ```bash
-./browser-launch.py
+sudo cp browser-launch.py /usr/local/bin/browser-launch.py
+sudo chmod +x /usr/local/bin/browser-launch.py
+```
+
+### 3. Create the log directory
+
+```bash
+sudo mkdir -p /var/log/browser-launch && sudo chown $USER:$USER /var/log/browser-launch
+```
+
+### 4. Run the Setup Wizard
+
+```bash
+python3 /usr/local/bin/browser-launch.py --setup
 ```
 
 The wizard will guide you through:
 1. Browser selection (auto-detected)
 2. Captive portal configuration (optional)
 3. Adding tabs and windows
-4. systemd service installation (optional)
 
-### 3. That's It!
+### 5. Set up autostart
 
-Your browser will now launch automatically at boot with your configured tabs.
+Browser Launch uses a `.desktop` autostart entry to launch at login. Create it with:
 
-## Post-Installation
-
-### Verify Installation
-
-Check that the systemd service is installed and enabled:
 ```bash
-systemctl --user status browser-launch
+cat > ~/.config/autostart/browser-launch.desktop << EOF
+[Desktop Entry]
+Type=Application
+Exec=/usr/local/bin/browser-launch.py --run
+Hidden=false
+NoDisplay=false
+X-GNOME-Autostart-enabled=true
+Name=Browser Launch
+Comment=Launches browser with configurable tabs and health checks
+EOF
 ```
 
-You should see:
-```
-● browser-launch.service - Browser Auto-Launch
-     Loaded: loaded (/home/user/.config/systemd/user/browser-launch.service; enabled)
-     Active: inactive (dead)
-```
-
-### Test It
-
-Reboot your system or manually start the service:
-```bash
-systemctl --user start browser-launch
-```
-
-Your browser should open with your configured tabs.
+That's it — your browser will now launch automatically at your next login.
 
 ## Configuration File Location
 
 After setup, your configuration is stored at:
 ```
-~/Documents/Coding/Configs/browser-launch.yaml
+~/Documents/Configs/browser-launch.yaml
 ```
 
-You can edit this file anytime to add/remove tabs.
+You can edit this file anytime to add, remove, or reorganize tabs and windows.
 
 ## Adding More Tabs Later
 
 1. Open the config file:
    ```bash
-   nano ~/Documents/Coding/Configs/browser-launch.yaml
+   nano ~/Documents/Configs/browser-launch.yaml
    ```
 
 2. Add tabs to an existing window:
    ```yaml
    windows:
-     my_window:
+     Network:
        tabs:
-         - name: "New Site"
-           url: "https://example.com"
+         - name: "New Service"
+           url: "http://192.168.1.50:3000"
    ```
 
 3. Save and close (Ctrl+X, Y, Enter)
 
-4. Changes take effect on next boot (or next manual run)
+4. Changes take effect on next login (or next manual run)
+
+## Optional: systemd Service
+
+If you prefer systemd over the `.desktop` autostart method:
+
+```bash
+python3 /usr/local/bin/browser-launch.py --install
+```
+
+This installs a systemd user service and removes the `.desktop` autostart file to prevent double-launching.
+
+To verify:
+```bash
+systemctl --user status browser-launch
+```
+
+## Verify Logging
+
+After your first login following installation, check the log to confirm everything ran correctly:
+
+```bash
+cat /var/log/browser-launch/startup.log
+```
 
 ## Uninstallation
 
-### Remove systemd service only
 ```bash
-./browser-launch.py --uninstall
-```
+# Remove autostart entry
+rm ~/.config/autostart/browser-launch.desktop
 
-### Complete removal
-```bash
-# Uninstall service
-./browser-launch.py --uninstall
+# Remove systemd service (if installed)
+python3 /usr/local/bin/browser-launch.py --uninstall
 
 # Remove config file
-rm ~/Documents/Coding/Configs/browser-launch.yaml
+rm ~/Documents/Configs/browser-launch.yaml
 
 # Remove script
-rm browser-launch.py
+sudo rm /usr/local/bin/browser-launch.py
+
+# Remove log directory (optional)
+sudo rm -rf /var/log/browser-launch
 ```
 
 ## Troubleshooting
@@ -131,16 +152,14 @@ sudo apt install firefox
 sudo apt install chromium-browser
 ```
 
-### "Permission denied"
+### "Permission denied" on script
 
-Make the script executable:
 ```bash
-chmod +x browser-launch.py
+sudo chmod +x /usr/local/bin/browser-launch.py
 ```
 
 ### Dependencies won't install
 
-The script tries to auto-install dependencies. If that fails:
 ```bash
 pip3 install --user --break-system-packages pyyaml requests
 ```
@@ -151,30 +170,24 @@ pip3 install --user --break-system-packages playwright
 python3 -m playwright install chromium
 ```
 
-### Browser doesn't open at boot
+### Browser doesn't open at login
 
-1. Check service status:
+1. Check the log:
    ```bash
-   systemctl --user status browser-launch
+   cat /var/log/browser-launch/startup.log
    ```
 
-2. Check logs:
+2. Try running manually:
    ```bash
-   journalctl --user -u browser-launch -n 50
+   python3 /usr/local/bin/browser-launch.py --run
    ```
 
-3. Try running manually:
+3. Verify the autostart file exists:
    ```bash
-   ./browser-launch.py --run
+   cat ~/.config/autostart/browser-launch.desktop
    ```
 
 ### Need help?
 
-- Check the [README](README.md) for detailed documentation
+- Check the [README](README.md) for full documentation
 - Report issues on [GitHub Issues](https://github.com/yourusername/browser-launch/issues)
-
-## Next Steps
-
-- Review the [example configuration](config.example.yaml) for ideas
-- Read the full [README](README.md) for advanced features
-- Customize your tab groups in the config file
