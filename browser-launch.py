@@ -21,6 +21,7 @@ import sys
 import time
 import subprocess
 import logging
+import json
 from pathlib import Path
 import argparse
 
@@ -665,6 +666,35 @@ def launch_and_accept(portal_config, browser_path):
     return False
 
 # ==============================================================================
+# BRAVE SESSION MANAGEMENT
+# ==============================================================================
+
+def clear_brave_session_restore():
+    """
+    Mark Brave's last exit as clean and disable session restore so a reboot
+    doesn't cause Brave to reopen all previous windows.
+    """
+    prefs_file = Path.home() / ".config" / "BraveSoftware" / "Brave-Browser" / "Default" / "Preferences"
+    if not prefs_file.exists():
+        logging.info("No Brave preferences file found, skipping session cleanup")
+        return
+
+    try:
+        with open(prefs_file, 'r') as f:
+            prefs = json.load(f)
+
+        prefs.setdefault('profile', {})['exit_type'] = 'Normal'
+        prefs.setdefault('profile', {})['exited_cleanly'] = True
+        prefs.setdefault('session', {})['restore_on_startup'] = 1  # Open New Tab page
+
+        with open(prefs_file, 'w') as f:
+            json.dump(prefs, f)
+
+        logging.info("✅ Cleared Brave session restore state")
+    except Exception as e:
+        logging.warning(f"⚠️ Could not clear Brave session state: {e}")
+
+# ==============================================================================
 # TAB LAUNCHER
 # ==============================================================================
 
@@ -707,7 +737,7 @@ def open_tabs(window_name, tabs, delay=0, health_check=False, timeout=3, browser
 
     if urls_to_open:
         try:
-            subprocess.Popen([browser_path, "--new-window", "--no-restore-last-session"] + urls_to_open)
+            subprocess.Popen([browser_path, "--new-window", "--start-maximized"] + urls_to_open)
             logging.info(f"✅ Opened {window_name} window with {len(urls_to_open)}/{len(tabs)} tab(s)")
             # Give browser time to process this window before launching the next one
             time.sleep(3)
@@ -856,6 +886,9 @@ def _run(lock_file=None):
                 logging.info(f"No portal config found for '{current_ssid}'")
         else:
             logging.info("Could not determine current WiFi network")
+
+    # Clear Brave's crash state so it doesn't restore the previous session
+    clear_brave_session_restore()
 
     # Launch browser windows
     windows = config.get('windows', {})
