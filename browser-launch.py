@@ -671,28 +671,46 @@ def launch_and_accept(portal_config, browser_path):
 
 def clear_brave_session_restore():
     """
-    Mark Brave's last exit as clean and disable session restore so a reboot
-    doesn't cause Brave to reopen all previous windows.
+    Kill any running Brave instance, wipe session files, and mark the exit
+    as clean so Brave starts fresh with no restored windows.
     """
-    prefs_file = Path.home() / ".config" / "BraveSoftware" / "Brave-Browser" / "Default" / "Preferences"
-    if not prefs_file.exists():
-        logging.info("No Brave preferences file found, skipping session cleanup")
-        return
-
+    # Kill any running Brave processes
     try:
-        with open(prefs_file, 'r') as f:
-            prefs = json.load(f)
+        subprocess.run(['pkill', '-f', 'brave'], stderr=subprocess.DEVNULL)
+        time.sleep(2)
+        subprocess.run(['pkill', '-9', '-f', 'brave'], stderr=subprocess.DEVNULL)
+        time.sleep(1)
+        logging.info("✅ Killed existing Brave processes")
+    except Exception:
+        pass
 
-        prefs.setdefault('profile', {})['exit_type'] = 'Normal'
-        prefs.setdefault('profile', {})['exited_cleanly'] = True
-        prefs.setdefault('session', {})['restore_on_startup'] = 1  # Open New Tab page
+    brave_dir = Path.home() / ".config" / "BraveSoftware" / "Brave-Browser" / "Default"
 
-        with open(prefs_file, 'w') as f:
-            json.dump(prefs, f)
+    # Delete session files so Brave has nothing to restore
+    sessions_dir = brave_dir / "Sessions"
+    if sessions_dir.exists():
+        import shutil
+        shutil.rmtree(sessions_dir)
+        sessions_dir.mkdir()
+        logging.info("✅ Cleared Brave session files")
 
-        logging.info("✅ Cleared Brave session restore state")
-    except Exception as e:
-        logging.warning(f"⚠️ Could not clear Brave session state: {e}")
+    # Patch preferences to mark clean exit
+    prefs_file = brave_dir / "Preferences"
+    if prefs_file.exists():
+        try:
+            with open(prefs_file, 'r') as f:
+                prefs = json.load(f)
+
+            prefs.setdefault('profile', {})['exit_type'] = 'Normal'
+            prefs.setdefault('profile', {})['exited_cleanly'] = True
+            prefs.setdefault('session', {})['restore_on_startup'] = 1
+
+            with open(prefs_file, 'w') as f:
+                json.dump(prefs, f)
+
+            logging.info("✅ Patched Brave preferences for clean startup")
+        except Exception as e:
+            logging.warning(f"⚠️ Could not patch Brave preferences: {e}")
 
 # ==============================================================================
 # TAB LAUNCHER
