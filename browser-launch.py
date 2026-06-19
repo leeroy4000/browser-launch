@@ -707,7 +707,7 @@ def open_tabs(window_name, tabs, delay=0, health_check=False, timeout=3, browser
 
     if urls_to_open:
         try:
-            subprocess.Popen([browser_path, "--new-window"] + urls_to_open)
+            subprocess.Popen([browser_path, "--new-window", "--no-restore-last-session"] + urls_to_open)
             logging.info(f"✅ Opened {window_name} window with {len(urls_to_open)}/{len(tabs)} tab(s)")
             # Give browser time to process this window before launching the next one
             time.sleep(3)
@@ -769,6 +769,26 @@ Examples:
     # Initialize logging early with default path so all subsequent calls are captured
     setup_logging()
 
+    # Prevent concurrent runs (e.g. desktop autostart firing twice on login)
+    lock_file = Path("/tmp/browser-launch.lock")
+    if lock_file.exists():
+        try:
+            pid = int(lock_file.read_text().strip())
+            Path(f"/proc/{pid}").stat()
+            logging.warning(f"Already running (pid {pid}), exiting.")
+            sys.exit(0)
+        except (ValueError, FileNotFoundError, OSError):
+            pass  # stale lock
+    lock_file.write_text(str(os.getpid()))
+    try:
+        _run(lock_file)
+    finally:
+        lock_file.unlink(missing_ok=True)
+    return
+
+
+def _run(lock_file=None):
+    """Core launch logic, separated so the lockfile finally-block works cleanly."""
     # Load configuration
     config = load_config()
 
