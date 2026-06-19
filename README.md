@@ -1,6 +1,6 @@
 # Browser Launch
 
-Automate your browser startup on Linux and Windows with configurable tabs, health checks, and captive portal handling.
+Launch your browser with a clean, organized set of windows and tabs every time you log in. Configurable via YAML, with health checks for local services, captive portal auto-accept, and cross-platform support (Linux & Windows). Includes Brave-specific session cleanup so reboots never leave stale windows behind. Supports Brave, Chrome, Firefox, Chromium, and Edge.
 
 ## Features
 
