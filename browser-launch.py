@@ -9,10 +9,11 @@ Features:
 - Config file management (YAML)
 - Health checks for services
 - Captive portal handling
-- systemd service installation
-- Cross-browser support (Brave, Firefox, Chrome, Chromium)
+- Autostart installation (systemd on Linux, Task Scheduler on Windows)
+- Cross-platform (Linux and Windows)
+- Cross-browser support (Brave, Firefox, Chrome, Chromium, Edge)
 
-Repository: https://github.com/yourusername/browser-launch
+Repository: https://github.com/leeroy4000/browser-launch
 License: MIT
 """
 
@@ -22,18 +23,27 @@ import time
 import subprocess
 import logging
 import json
+import platform
+import shutil
+import tempfile
 from pathlib import Path
 import argparse
+
+IS_WINDOWS = platform.system() == 'Windows'
 
 # ==============================================================================
 # CONSTANTS
 # ==============================================================================
 
-VERSION = "2.0.1"
+VERSION = "3.0.0"
 CONFIG_DIR = Path.home() / "Documents" / "Configs"
 CONFIG_FILE = CONFIG_DIR / "browser-launch.yaml"
 SERVICE_NAME = "browser-launch"
-DEFAULT_LOG_FILE = "/var/log/browser-launch/startup.log"
+
+if IS_WINDOWS:
+    DEFAULT_LOG_FILE = str(Path.home() / "AppData" / "Local" / "browser-launch" / "startup.log")
+else:
+    DEFAULT_LOG_FILE = "/var/log/browser-launch/startup.log"
 
 # ==============================================================================
 # DEPENDENCY MANAGEMENT
@@ -58,15 +68,16 @@ def check_and_install_dependencies():
 
     if missing:
         print(f"📦 Installing missing dependencies: {', '.join(missing)}")
+        pip_args = [sys.executable, '-m', 'pip', 'install', '--user']
+        if not IS_WINDOWS:
+            pip_args.append('--break-system-packages')
         try:
-            subprocess.check_call([
-                sys.executable, '-m', 'pip', 'install', '--user', '--break-system-packages'
-            ] + missing, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            subprocess.check_call(pip_args + missing, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             print("✅ Dependencies installed successfully")
         except subprocess.CalledProcessError as e:
             print(f"❌ Failed to install dependencies: {e}")
             print("Please install manually with:")
-            print(f"  pip install --user --break-system-packages {' '.join(missing)}")
+            print(f"  pip install --user {' '.join(missing)}")
             sys.exit(1)
 
 # Check dependencies before importing
@@ -100,12 +111,36 @@ def detect_browsers():
     """
     browsers = {}
 
-    browser_paths = {
-        'Brave': ['/usr/bin/brave-browser', '/usr/bin/brave', '/snap/bin/brave'],
-        'Firefox': ['/usr/bin/firefox', '/snap/bin/firefox'],
-        'Chrome': ['/usr/bin/google-chrome', '/usr/bin/google-chrome-stable'],
-        'Chromium': ['/usr/bin/chromium', '/usr/bin/chromium-browser', '/snap/bin/chromium']
-    }
+    if IS_WINDOWS:
+        pf = os.environ.get('PROGRAMFILES', 'C:\\Program Files')
+        pf86 = os.environ.get('PROGRAMFILES(X86)', 'C:\\Program Files (x86)')
+        localappdata = os.environ.get('LOCALAPPDATA', '')
+        browser_paths = {
+            'Brave': [
+                f'{pf}\\BraveSoftware\\Brave-Browser\\Application\\brave.exe',
+                f'{pf86}\\BraveSoftware\\Brave-Browser\\Application\\brave.exe',
+                f'{localappdata}\\BraveSoftware\\Brave-Browser\\Application\\brave.exe',
+            ],
+            'Chrome': [
+                f'{pf}\\Google\\Chrome\\Application\\chrome.exe',
+                f'{pf86}\\Google\\Chrome\\Application\\chrome.exe',
+            ],
+            'Firefox': [
+                f'{pf}\\Mozilla Firefox\\firefox.exe',
+                f'{pf86}\\Mozilla Firefox\\firefox.exe',
+            ],
+            'Edge': [
+                f'{pf}\\Microsoft\\Edge\\Application\\msedge.exe',
+                f'{pf86}\\Microsoft\\Edge\\Application\\msedge.exe',
+            ],
+        }
+    else:
+        browser_paths = {
+            'Brave': ['/usr/bin/brave-browser', '/usr/bin/brave', '/snap/bin/brave'],
+            'Firefox': ['/usr/bin/firefox', '/snap/bin/firefox'],
+            'Chrome': ['/usr/bin/google-chrome', '/usr/bin/google-chrome-stable'],
+            'Chromium': ['/usr/bin/chromium', '/usr/bin/chromium-browser', '/snap/bin/chromium'],
+        }
 
     for browser_name, paths in browser_paths.items():
         for path in paths:
@@ -432,7 +467,8 @@ def run_setup_wizard():
             'wait_before_start': 20,
             'health_check_timeout': 3,
             'log_file': DEFAULT_LOG_FILE,
-            'brave_path': browser_path
+            'browser_path': browser_path,
+            'brave_path': browser_path,
         }
     }
 
@@ -457,15 +493,18 @@ def run_setup_wizard():
     print()
 
     print("─" * 70)
-    print("systemd Service Installation")
+    print("Autostart Installation")
     print("─" * 70)
-    print("Install as a systemd service to run automatically at boot?")
+    if IS_WINDOWS:
+        print("Install a Task Scheduler task to run automatically at logon?")
+    else:
+        print("Install as a systemd service to run automatically at login?")
     print()
 
-    install_service = input("Install systemd service? (y/n): ").strip().lower() == 'y'
+    install_service = input("Install autostart? (y/n): ").strip().lower() == 'y'
 
     if install_service:
-        install_systemd_service(browser_path)
+        install_autostart(browser_path)
 
     print()
     print("=" * 70)
@@ -483,17 +522,52 @@ def run_setup_wizard():
     print()
 
 # ==============================================================================
-# SYSTEMD SERVICE MANAGEMENT
+# AUTOSTART MANAGEMENT
 # ==============================================================================
 
-def install_systemd_service(browser_path):
-    """
-    Install systemd user service for auto-launch at login.
-
-    Args:
-        browser_path (str): Path to browser executable
-    """
+def install_autostart(browser_path):
+    """Install auto-launch at login (systemd on Linux, Task Scheduler on Windows)."""
     script_path = Path(__file__).resolve()
+
+    if IS_WINDOWS:
+        _install_windows_task(script_path)
+    else:
+        _install_systemd_service(script_path)
+
+
+def _install_windows_task(script_path):
+    """Create a Windows Task Scheduler task that runs at user logon."""
+    task_name = SERVICE_NAME
+    python_path = sys.executable
+    try:
+        # Remove existing task if present
+        subprocess.run(
+            ['schtasks', '/Delete', '/TN', task_name, '/F'],
+            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+        )
+        subprocess.run([
+            'schtasks', '/Create',
+            '/TN', task_name,
+            '/TR', f'"{python_path}" "{script_path}" --run',
+            '/SC', 'ONLOGON',
+            '/DELAY', '0000:20',
+            '/RL', 'LIMITED',
+            '/F',
+        ], check=True)
+        print(f"✅ Task Scheduler task '{task_name}' created")
+        print(f"   Runs at logon with a 20-second delay")
+        print()
+        print("Manage with:")
+        print(f"  schtasks /Query /TN {task_name}")
+        print(f"  schtasks /Delete /TN {task_name} /F")
+    except subprocess.CalledProcessError as e:
+        print(f"❌ Failed to create scheduled task: {e}")
+    except Exception as e:
+        print(f"❌ Error: {e}")
+
+
+def _install_systemd_service(script_path):
+    """Install a systemd user service for auto-launch at login."""
     service_dir = Path.home() / ".config" / "systemd" / "user"
     service_file = service_dir / f"{SERVICE_NAME}.service"
 
@@ -541,25 +615,37 @@ WantedBy=default.target
     except Exception as e:
         print(f"❌ Error: {e}")
 
-def uninstall_systemd_service():
-    """Remove systemd user service."""
-    service_file = Path.home() / ".config" / "systemd" / "user" / f"{SERVICE_NAME}.service"
 
-    try:
-        subprocess.run(['systemctl', '--user', 'disable', f'{SERVICE_NAME}.service'],
-                      stderr=subprocess.DEVNULL)
-        subprocess.run(['systemctl', '--user', 'stop', f'{SERVICE_NAME}.service'],
-                      stderr=subprocess.DEVNULL)
+def uninstall_autostart():
+    """Remove auto-launch (systemd on Linux, Task Scheduler on Windows)."""
+    if IS_WINDOWS:
+        try:
+            subprocess.run(
+                ['schtasks', '/Delete', '/TN', SERVICE_NAME, '/F'],
+                check=True
+            )
+            print(f"✅ Task Scheduler task '{SERVICE_NAME}' removed")
+        except subprocess.CalledProcessError:
+            print(f"⚠️ Task '{SERVICE_NAME}' not found or already removed")
+        except Exception as e:
+            print(f"❌ Error: {e}")
+    else:
+        service_file = Path.home() / ".config" / "systemd" / "user" / f"{SERVICE_NAME}.service"
+        try:
+            subprocess.run(['systemctl', '--user', 'disable', f'{SERVICE_NAME}.service'],
+                          stderr=subprocess.DEVNULL)
+            subprocess.run(['systemctl', '--user', 'stop', f'{SERVICE_NAME}.service'],
+                          stderr=subprocess.DEVNULL)
 
-        if service_file.exists():
-            service_file.unlink()
+            if service_file.exists():
+                service_file.unlink()
 
-        subprocess.run(['systemctl', '--user', 'daemon-reload'], check=True)
+            subprocess.run(['systemctl', '--user', 'daemon-reload'], check=True)
 
-        print(f"✅ systemd service uninstalled")
+            print(f"✅ systemd service uninstalled")
 
-    except Exception as e:
-        print(f"❌ Error uninstalling service: {e}")
+        except Exception as e:
+            print(f"❌ Error uninstalling service: {e}")
 
 # ==============================================================================
 # NETWORK DETECTION
@@ -596,6 +682,31 @@ def wait_for_internet(max_wait=30, check_interval=5):
 
     logging.warning(f"⚠️ No internet connection after {max_wait}s")
     return False
+
+def _get_current_ssid():
+    """Detect the current WiFi SSID on Linux (nmcli) or Windows (netsh)."""
+    try:
+        if IS_WINDOWS:
+            output = subprocess.check_output(
+                ['netsh', 'wlan', 'show', 'interfaces'],
+                stderr=subprocess.DEVNULL
+            ).decode(errors='replace')
+            for line in output.splitlines():
+                if 'SSID' in line and 'BSSID' not in line:
+                    return line.split(':', 1)[1].strip()
+        else:
+            output = subprocess.check_output(
+                ["nmcli", "-t", "-f", "active,ssid", "dev", "wifi"],
+                stderr=subprocess.DEVNULL
+            ).decode()
+            for line in output.splitlines():
+                if line:
+                    active, ssid = line.split(":", 1)
+                    if active == "yes":
+                        return ssid
+    except Exception:
+        pass
+    return None
 
 # ==============================================================================
 # HEALTH CHECK
@@ -669,6 +780,24 @@ def launch_and_accept(portal_config, browser_path):
 # BRAVE SESSION MANAGEMENT
 # ==============================================================================
 
+def _get_browser_path(settings):
+    """Get browser path from config, supporting both old and new key names."""
+    path = settings.get('browser_path') or settings.get('brave_path')
+    if path:
+        return path
+    browsers = detect_browsers()
+    if browsers:
+        return next(iter(browsers.values()))
+    return 'brave-browser'
+
+
+def _get_brave_profile_dir():
+    """Return the path to Brave's Default profile directory for the current OS."""
+    if IS_WINDOWS:
+        return Path(os.environ.get('LOCALAPPDATA', '')) / "BraveSoftware" / "Brave-Browser" / "User Data" / "Default"
+    return Path.home() / ".config" / "BraveSoftware" / "Brave-Browser" / "Default"
+
+
 def clear_brave_session_restore():
     """
     Kill any running Brave instance, wipe session files, and mark the exit
@@ -676,20 +805,22 @@ def clear_brave_session_restore():
     """
     # Kill any running Brave processes
     try:
-        subprocess.run(['pkill', '-f', 'brave'], stderr=subprocess.DEVNULL)
-        time.sleep(2)
-        subprocess.run(['pkill', '-9', '-f', 'brave'], stderr=subprocess.DEVNULL)
+        if IS_WINDOWS:
+            subprocess.run(['taskkill', '/F', '/IM', 'brave.exe'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        else:
+            subprocess.run(['pkill', '-f', 'brave'], stderr=subprocess.DEVNULL)
+            time.sleep(2)
+            subprocess.run(['pkill', '-9', '-f', 'brave'], stderr=subprocess.DEVNULL)
         time.sleep(1)
         logging.info("✅ Killed existing Brave processes")
     except Exception:
         pass
 
-    brave_dir = Path.home() / ".config" / "BraveSoftware" / "Brave-Browser" / "Default"
+    brave_dir = _get_brave_profile_dir()
 
     # Delete session files so Brave has nothing to restore
     sessions_dir = brave_dir / "Sessions"
     if sessions_dir.exists():
-        import shutil
         shutil.rmtree(sessions_dir)
         sessions_dir.mkdir()
         logging.info("✅ Cleared Brave session files")
@@ -794,7 +925,7 @@ Examples:
 
     # Handle explicit commands
     if args.uninstall:
-        uninstall_systemd_service()
+        uninstall_autostart()
         return
 
     if args.setup:
@@ -810,19 +941,28 @@ Examples:
         if not config:
             print("❌ No configuration found. Run setup first: ./browser-launch.py --setup")
             sys.exit(1)
-        browser_path = config.get('settings', {}).get('brave_path', '/usr/bin/brave-browser')
-        install_systemd_service(browser_path)
+        browser_path = _get_browser_path(config.get('settings', {}))
+        install_autostart(browser_path)
         return
 
     # Initialize logging early with default path so all subsequent calls are captured
     setup_logging()
 
     # Prevent concurrent runs (e.g. desktop autostart firing twice on login)
-    lock_file = Path("/tmp/browser-launch.lock")
+    lock_file = Path(tempfile.gettempdir()) / "browser-launch.lock"
     if lock_file.exists():
         try:
             pid = int(lock_file.read_text().strip())
-            Path(f"/proc/{pid}").stat()
+            if IS_WINDOWS:
+                # On Windows, check if the PID is still running via tasklist
+                result = subprocess.run(
+                    ['tasklist', '/FI', f'PID eq {pid}', '/NH'],
+                    capture_output=True, text=True
+                )
+                if str(pid) not in result.stdout:
+                    raise FileNotFoundError("stale")
+            else:
+                Path(f"/proc/{pid}").stat()
             logging.warning(f"Already running (pid {pid}), exiting.")
             sys.exit(0)
         except (ValueError, FileNotFoundError, OSError):
@@ -875,28 +1015,14 @@ def _run(lock_file=None):
         if not wait_for_internet(max_wait=30):
             logging.warning("Proceeding without internet connection")
 
-        current_ssid = None
-        try:
-            ssid_output = subprocess.check_output(
-                ["nmcli", "-t", "-f", "active,ssid", "dev", "wifi"],
-                stderr=subprocess.DEVNULL
-            ).decode()
-            for line in ssid_output.splitlines():
-                if line:
-                    active, ssid = line.split(":", 1)
-                    if active == "yes":
-                        current_ssid = ssid
-                        break
-        except:
-            pass
+        current_ssid = _get_current_ssid()
 
         if current_ssid:
             portal_found = False
             for portal in portals:
                 if portal.get('ssid') == current_ssid:
                     logging.info(f"Found portal config for '{current_ssid}'")
-                    browser_path = settings.get('brave_path', '/usr/bin/brave-browser')
-                    launch_and_accept(portal, browser_path)
+                    launch_and_accept(portal, _get_browser_path(settings))
                     portal_found = True
                     break
 
@@ -910,7 +1036,7 @@ def _run(lock_file=None):
 
     # Launch browser windows
     windows = config.get('windows', {})
-    browser_path = settings.get('brave_path', '/usr/bin/brave-browser')
+    browser_path = _get_browser_path(settings)
     health_check_timeout = settings.get('health_check_timeout', 3)
 
     for window_name, window_config in windows.items():
@@ -936,8 +1062,8 @@ def _run(lock_file=None):
 # ==============================================================================
 
 if __name__ == "__main__":
-    # Security check
-    if os.geteuid() == 0:
+    # Security check — don't run as root/admin
+    if not IS_WINDOWS and os.geteuid() == 0:
         print("❌ Do not run this script as root.")
         sys.exit(1)
 
