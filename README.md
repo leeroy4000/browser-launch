@@ -10,6 +10,7 @@ Automate your browser startup on Linux with configurable tabs, health checks, an
 - 🔧 **Interactive setup** - Easy configuration wizard
 - 🌐 **Multi-browser support** - Works with Brave, Firefox, Chrome, Chromium
 - 📝 **YAML configuration** - Simple file editing for tab management
+- 🧹 **Clean boot** - Clears previous Brave sessions so you get a fresh environment every login
 - ⚙️ **systemd integration** - Optional service management
 
 ## Quick Start
@@ -17,7 +18,7 @@ Automate your browser startup on Linux with configurable tabs, health checks, an
 ### 1. Download the script
 
 ```bash
-git clone https://github.com/yourusername/browser-launch.git
+git clone https://github.com/leeroy4000/browser-launch.git
 cd browser-launch
 chmod +x browser-launch.py
 ```
@@ -117,13 +118,25 @@ settings:
 ./browser-launch.py --uninstall
 ```
 
+## Session Cleanup
+
+On Linux, rebooting without closing Brave causes it to treat the shutdown as a crash and restore all previous windows. This script handles that automatically before launching:
+
+1. Kills any running Brave processes
+2. Deletes Brave's session files (`~/.config/BraveSoftware/Brave-Browser/Default/Sessions/`)
+3. Patches Brave's Preferences to mark the exit as clean
+
+This ensures you get a fresh, predictable browser environment on every login with only your configured tabs.
+
+A PID-based lockfile (`/tmp/browser-launch.lock`) prevents the script from running twice if autostart fires more than once.
+
 ## Autostart
 
 Browser Launch uses a `.desktop` autostart entry by default, which fires at login after the desktop environment is ready. This is the recommended approach for launching a graphical browser.
 
 The autostart file is located at:
 ```
-~/.config/autostart/brave-bootup.desktop
+~/.config/autostart/browser-launch.desktop
 ```
 
 Optionally, a systemd user service can be installed instead via `--install`.
@@ -295,7 +308,7 @@ Run the setup wizard:
 rm ~/Documents/Configs/browser-launch.yaml
 
 # Remove autostart entry
-rm ~/.config/autostart/brave-bootup.desktop
+rm ~/.config/autostart/browser-launch.desktop
 
 # Remove script
 sudo rm /usr/local/bin/browser-launch.py

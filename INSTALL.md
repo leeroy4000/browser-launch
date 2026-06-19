@@ -12,13 +12,13 @@
 
 **Option A: Using git**
 ```bash
-git clone https://github.com/yourusername/browser-launch.git
+git clone https://github.com/leeroy4000/browser-launch.git
 cd browser-launch
 ```
 
 **Option B: Manual download**
 ```bash
-wget https://raw.githubusercontent.com/yourusername/browser-launch/main/browser-launch.py
+wget https://raw.githubusercontent.com/leeroy4000/browser-launch/main/browser-launch.py
 chmod +x browser-launch.py
 ```
 
@@ -190,4 +190,4 @@ python3 -m playwright install chromium
 ### Need help?
 
 - Check the [README](README.md) for full documentation
-- Report issues on [GitHub Issues](https://github.com/yourusername/browser-launch/issues)
+- Report issues on [GitHub Issues](https://github.com/leeroy4000/browser-launch/issues)
