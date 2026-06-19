@@ -1,6 +1,6 @@
 # Browser Launch
 
-Automate your browser startup on Linux with configurable tabs, health checks, and captive portal handling.
+Automate your browser startup on Linux and Windows with configurable tabs, health checks, and captive portal handling.
 
 ## Features
 
@@ -8,40 +8,44 @@ Automate your browser startup on Linux with configurable tabs, health checks, an
 - 🏥 **Health checks** - Skip tabs for services that are down
 - 📶 **Captive portal support** - Auto-accept WiFi login pages
 - 🔧 **Interactive setup** - Easy configuration wizard
-- 🌐 **Multi-browser support** - Works with Brave, Firefox, Chrome, Chromium
+- 🌐 **Multi-browser support** - Brave, Firefox, Chrome, Chromium, Edge
+- 🖥️ **Cross-platform** - Works on Linux and Windows with a single config file
 - 📝 **YAML configuration** - Simple file editing for tab management
 - 🧹 **Clean boot** - Clears previous Brave sessions so you get a fresh environment every login
-- ⚙️ **systemd integration** - Optional service management
+- ⚙️ **Autostart integration** - systemd on Linux, Task Scheduler on Windows
 
 ## Quick Start
 
-### 1. Download the script
+### Linux
 
 ```bash
 git clone https://github.com/leeroy4000/browser-launch.git
 cd browser-launch
 chmod +x browser-launch.py
+./browser-launch.py
 ```
 
-### 2. Run setup wizard
+### Windows
 
-```bash
-./browser-launch.py
+```powershell
+git clone https://github.com/leeroy4000/browser-launch.git
+cd browser-launch
+python browser-launch.py
 ```
 
 The setup wizard will:
 - Detect installed browsers
 - Configure captive portal (if needed)
 - Set up your tabs and windows
-- Install systemd service (optional)
+- Install autostart (optional) — systemd service on Linux, Task Scheduler task on Windows
 
-### 3. Done!
-
-Your browser will now launch automatically at login with your configured tabs.
+Your browser will launch automatically at next login with your configured tabs.
 
 ## Configuration
 
-The configuration file is stored at `~/Documents/Configs/browser-launch.yaml`
+The configuration file is stored at `~/Documents/Configs/browser-launch.yaml` on both platforms.
+
+On Windows, this resolves to `C:\Users\<you>\Documents\Configs\browser-launch.yaml`.
 
 ### Example Configuration
 
@@ -82,76 +86,69 @@ windows:
 settings:
   wait_before_start: 15        # Seconds to wait for desktop environment
   health_check_timeout: 3      # Seconds to wait for each service response
-  log_file: /var/log/browser-launch/startup.log
-  brave_path: /usr/bin/brave-browser
+  log_file: /var/log/browser-launch/startup.log   # Linux default
+  browser_path: /usr/bin/brave-browser             # Linux example
+  # browser_path: C:\Program Files\BraveSoftware\Brave-Browser\Application\brave.exe  # Windows example
 ```
+
+The `browser_path` setting accepts the path for any supported browser. If omitted, the script auto-detects installed browsers. The legacy `brave_path` key is still supported.
 
 ## Usage
 
-### Run normally
 ```bash
-./browser-launch.py
+./browser-launch.py              # Run setup wizard or normal operation
+./browser-launch.py --run        # Force normal operation (skip wizard)
+./browser-launch.py --setup      # Run setup wizard
+./browser-launch.py --add-portal # Add new captive portal to config
+./browser-launch.py --install    # Install autostart (systemd or Task Scheduler)
+./browser-launch.py --uninstall  # Remove autostart
 ```
 
-### Force run (skip setup wizard)
-```bash
-./browser-launch.py --run
-```
-
-### Run setup wizard again
-```bash
-./browser-launch.py --setup
-```
-
-### Add a new captive portal
-```bash
-./browser-launch.py --add-portal
-```
-
-### Install systemd service
-```bash
-./browser-launch.py --install
-```
-
-### Uninstall systemd service
-```bash
-./browser-launch.py --uninstall
-```
+On Windows, replace `./browser-launch.py` with `python browser-launch.py`.
 
 ## Session Cleanup
 
-On Linux, rebooting without closing Brave causes it to treat the shutdown as a crash and restore all previous windows. This script handles that automatically before launching:
+On both platforms, rebooting without closing Brave causes it to treat the shutdown as a crash and restore all previous windows. The script handles this automatically before launching:
 
-1. Kills any running Brave processes
-2. Deletes Brave's session files (`~/.config/BraveSoftware/Brave-Browser/Default/Sessions/`)
+1. Kills any running Brave processes (`pkill` on Linux, `taskkill` on Windows)
+2. Deletes Brave's session files
 3. Patches Brave's Preferences to mark the exit as clean
+
+| Platform | Session files location |
+|----------|----------------------|
+| Linux    | `~/.config/BraveSoftware/Brave-Browser/Default/Sessions/` |
+| Windows  | `%LOCALAPPDATA%\BraveSoftware\Brave-Browser\User Data\Default\Sessions\` |
 
 This ensures you get a fresh, predictable browser environment on every login with only your configured tabs.
 
-A PID-based lockfile (`/tmp/browser-launch.lock`) prevents the script from running twice if autostart fires more than once.
+A PID-based lockfile prevents the script from running twice if autostart fires more than once.
 
 ## Autostart
 
-Browser Launch uses a `.desktop` autostart entry by default, which fires at login after the desktop environment is ready. This is the recommended approach for launching a graphical browser.
+### Linux
 
-The autostart file is located at:
+The recommended approach is a `.desktop` autostart entry at:
 ```
 ~/.config/autostart/browser-launch.desktop
 ```
 
-Optionally, a systemd user service can be installed instead via `--install`.
+Alternatively, install a systemd user service via `--install`.
 
-## Managing the Service (if installed)
-
+**Managing the systemd service:**
 ```bash
-# Check status
 systemctl --user status browser-launch
-
-# Disable auto-start
 systemctl --user disable browser-launch
-
-# Enable auto-start
 systemctl --user enable browser-launch
+```
+
+### Windows
+
+Install a Task Scheduler task via `--install`. This creates a task that runs at logon with a 20-second delay.
+
+**Managing the task:**
+```powershell
+schtasks /Query /TN browser-launch
+schtasks /Delete /TN browser-launch /F
 ```
 
 ## Adding/Removing Tabs
@@ -191,25 +188,22 @@ This is useful for:
 
 ## Logging
 
-Logs are written to `/var/log/browser-launch/startup.log` by default.
+| Platform | Default log path |
+|----------|-----------------|
+| Linux    | `/var/log/browser-launch/startup.log` |
+| Linux (fallback) | `~/.local/share/browser-launch/startup.log` |
+| Windows  | `%LOCALAPPDATA%\browser-launch\startup.log` |
 
-```bash
-cat /var/log/browser-launch/startup.log
-```
-
-If `/var/log/browser-launch/` is not writable, the script falls back to:
-```
-~/.local/share/browser-launch/startup.log
-```
-
-To create the log directory with correct permissions:
+To create the log directory on Linux:
 ```bash
 sudo mkdir -p /var/log/browser-launch && sudo chown $USER:$USER /var/log/browser-launch
 ```
 
+On Windows, the log directory is created automatically.
+
 ## Captive Portal Setup
 
-The script supports multiple captive portals for different WiFi networks.
+The script supports multiple captive portals for different WiFi networks. WiFi detection uses `nmcli` on Linux and `netsh` on Windows.
 
 ### Adding Portals
 
@@ -232,24 +226,28 @@ The script auto-installs required Python packages:
 - `playwright` - (Optional) Captive portal automation
 
 To install manually:
+
+**Linux:**
 ```bash
 pip3 install --user --break-system-packages pyyaml requests
 ```
 
+**Windows:**
+```powershell
+pip install --user pyyaml requests
+```
+
 For captive portal support:
 ```bash
-pip3 install --user --break-system-packages playwright
-python3 -m playwright install chromium
+pip install --user playwright
+python -m playwright install chromium
 ```
 
 ## Troubleshooting
 
 ### Browser doesn't open at login
 
-1. Check the log:
-   ```bash
-   cat /var/log/browser-launch/startup.log
-   ```
+1. Check the log (see [Logging](#logging) for paths)
 
 2. Try running manually:
    ```bash
@@ -260,13 +258,11 @@ python3 -m playwright install chromium
    ```bash
    ls -la ~/Documents/Configs/browser-launch.yaml
    ```
+   On Windows: check `%USERPROFILE%\Documents\Configs\browser-launch.yaml`
 
 ### Tabs not opening (health check failures)
 
-Check the log to see which services are being skipped:
-```bash
-cat /var/log/browser-launch/startup.log
-```
+Check the log to see which services are being skipped.
 
 To temporarily disable health checks for a window:
 ```yaml
@@ -300,18 +296,20 @@ Run the setup wizard:
 
 ## Uninstallation
 
+### Linux
+
 ```bash
-# Remove systemd service (if installed)
 ./browser-launch.py --uninstall
-
-# Remove config file
 rm ~/Documents/Configs/browser-launch.yaml
-
-# Remove autostart entry
 rm ~/.config/autostart/browser-launch.desktop
-
-# Remove script
 sudo rm /usr/local/bin/browser-launch.py
+```
+
+### Windows
+
+```powershell
+python browser-launch.py --uninstall
+del %USERPROFILE%\Documents\Configs\browser-launch.yaml
 ```
 
 ## Contributing
