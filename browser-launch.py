@@ -464,7 +464,7 @@ def run_setup_wizard():
         'captive_portals': captive_portals,
         'windows': windows,
         'settings': {
-            'wait_before_start': 20,
+            'wait_before_start': 10,
             'health_check_timeout': 3,
             'log_file': DEFAULT_LOG_FILE,
             'browser_path': browser_path,
@@ -998,7 +998,7 @@ def _run(lock_file=None):
         setup_logging(config_log_file)
 
     # Wait for desktop environment
-    wait_time = settings.get('wait_before_start', 20)
+    wait_time = settings.get('wait_before_start', 10)
     logging.info(f"Waiting {wait_time}s for desktop environment")
     time.sleep(wait_time)
 
