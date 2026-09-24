@@ -323,3 +323,19 @@ Contributions welcome! Please:
 ## License
 
 MIT License - see LICENSE file for details
+
+## Open issues, questions & ideas
+
+*Kept current by Claude. When Nathan asks "any outstanding issues, questions or ideas?", read this section, raise the open items, and work from there. Add new items as they come up during work (unanswered questions, bugs found, feature ideas); move resolved ones to "Resolved" with the date. Last audited 2026-09-24.*
+
+### Issues
+- [ ] Installed `/usr/local/bin/browser-launch.py` still has the old 20s delay (repo has 10s).
+
+### Questions for Nathan
+- [ ] Should the installed copy be refreshed, and should autostart be the systemd unit instead of `.desktop`?
+
+### Ideas / future
+- (none recorded)
+
+### Resolved
+- (none yet)
