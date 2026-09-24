@@ -338,6 +338,7 @@ Installed copy is `/usr/local/bin/browser-launch.py` (autostart runs it). After 
 - [ ] Installed `/usr/local/bin/browser-launch.py` still has the old 20s delay (repo has 10s).
 
 ### Questions for Nathan
+- [ ] `CLAUDE.md` was added and then deleted on GitHub on 2026-09-05 ("Delete CLAUDE.md", under the `leeroy4000` account). I respected that: the local `CLAUDE.md` is kept **untracked** and listed in `.git/info/exclude`, so it never gets committed. Was the deletion intentional (e.g. you don't want it in this repo)? If not, remove it from `.git/info/exclude` and commit it.
 - [ ] Should the installed copy be refreshed, and should autostart be the systemd unit instead of `.desktop`?
 
 ### Ideas / future
