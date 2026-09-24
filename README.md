@@ -324,6 +324,12 @@ Contributions welcome! Please:
 
 MIT License - see LICENSE file for details
 
+## Deploy
+
+*Standing rule (Nathan, 2026-09-24): when a change is finished and working, Claude commits, pushes and deploys it without being asked, and if Nathan has to leave mid-task Claude finishes the task and deploys so it's usable when he's back. Docs-only changes need commit + push, no deploy. Exceptions are listed below.*
+
+Installed copy is `/usr/local/bin/browser-launch.py` (autostart runs it). After pushing, install with `sudo install -m 755 browser-launch.py /usr/local/bin/browser-launch.py` and restart the launcher. This needs Nathan's sudo password on the ThinkPad, so Claude records "install pending" under Open issues if it can't run it. (As of 2026-09-24 the installed copy was behind the repo.)
+
 ## Open issues, questions & ideas
 
 *Kept current by Claude. When Nathan asks "any outstanding issues, questions or ideas?", read this section, raise the open items, and work from there. Add new items as they come up during work (unanswered questions, bugs found, feature ideas); move resolved ones to "Resolved" with the date. Last audited 2026-09-24.*
