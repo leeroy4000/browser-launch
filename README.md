@@ -66,10 +66,10 @@ windows:
     health_check: true
     tabs:
       - name: Home Assistant
-        url: http://192.168.1.109:8123/dashboard-default/0
+        url: http://192.168.1.100:8123/dashboard-default/0
 
       - name: Proxmox
-        url: 'https://192.168.1.108:8006/#v1:0:18:4:::::::'
+        url: 'https://192.168.1.10:8006/#v1:0:18:4:::::::'
 
   # AI tools and productivity
   AI:
